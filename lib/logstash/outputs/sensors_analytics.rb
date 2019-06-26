@@ -34,7 +34,7 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
   def register
     @logger.info("Registering sensors_analytics Output",
                  :url => @url,
-                 :flush_interval => @flush_interval,
+                 :flush_interval_sec => @flush_interval_sec,
                  :flush_batch_size => @flush_batch_size
     )
 
@@ -44,7 +44,7 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
 
     buffer_config = {
         :max_items => @flush_batch_size.to_i,
-        :max_interval => @flush_interval.to_i,
+        :max_interval => @flush_interval_sec.to_i,
         :logger => @logger
     }
 
