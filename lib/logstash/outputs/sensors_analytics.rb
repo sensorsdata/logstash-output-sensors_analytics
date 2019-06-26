@@ -23,7 +23,7 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
   config :project, :validate => :string
 
   # 触发 flush 间隔
-  config :flush_interval, :validate => :number, :default => 2
+  config :flush_interval_sec, :validate => :number, :default => 2
 
   # 批次最大 record 数量
   config :flush_batch_size, :validate => :number, :default => 100
