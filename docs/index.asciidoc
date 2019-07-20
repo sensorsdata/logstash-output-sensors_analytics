@@ -48,7 +48,7 @@ include::{include_path}/plugin_header.asciidoc[]
   * Value type is <<string,string>>
   * There is no default value for this setting.
 
-神策分析的数据接收地址，必须是完整的 url 地址并以 sa 结尾，有端口号需要加上端口号。例如 :https://example.sensorsdata.cn:8106/sa。
+神策分析的数据接收地址，必须是完整的 url 地址并以 sa 结尾，有端口号需要加上端口号。例如 : https://example.sensorsdata.cn:8106/sa。
 
 [id="plugins-{type}s-{plugin}-project"]
 ===== `project`
@@ -56,7 +56,7 @@ include::{include_path}/plugin_header.asciidoc[]
   * Value type is <<string,string>>
   * There is no default value for this setting.
 
-项目名，可选项，配置后会覆盖事件中和 url 中指定的 project。优先级为：`project` 参数配置 > 事件中指定 > url 中指定。
+项目名称，配置后会覆盖事件中和 url 中指定的 project。优先级为：`project` 参数配置 > 事件中指定 > url 中指定。
 
 [id="plugins-{type}s-{plugin}-flush_interval_sec"]
 ===== `flush_interval_sec`
