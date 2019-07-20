@@ -22,7 +22,8 @@ include::{include_path}/plugin_header.asciidoc[]
 
 ==== Description
 
-用于讲数据发送至神策分析
+用于将数据处理并发送至神策分析
+导入的数据必须是神策的数据格式
 
 // Format anchors and links to support generated ids for versioning
 // Sample anchor: [id="plugins-{type}s-{plugin}-setting_name"]
