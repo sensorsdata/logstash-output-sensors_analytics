@@ -16,7 +16,7 @@ END - GENERATED VARIABLES, DO NOT EDIT!
 
 [id="plugins-{type}s-{plugin}"]
 
-=== Example output plugin
+=== Sensors Analytics output plugin
 
 include::{include_path}/plugin_header.asciidoc[]
 
