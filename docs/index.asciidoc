@@ -70,7 +70,7 @@ include::{include_path}/plugin_header.asciidoc[]
 ===== `flush_batch_size`
 
   * Value type is <<number,number>>
-  * Default value is `2`
+  * Default value is `100`
 
 触发批量发送的最大 record 数量。
 
