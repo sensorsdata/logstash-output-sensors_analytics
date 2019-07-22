@@ -53,7 +53,11 @@ gem "logstash-output-sensors_analytics", :path => "/your/local/logstash-output-s
 ```
 - Install plugin
 ```sh
+# Logstash 2.3 and higher
 bin/logstash-plugin install --no-verify
+
+# Prior to Logstash 2.3
+bin/plugin install --no-verify
 ```
 - Run Logstash with your plugin
 ```sh
