@@ -19,6 +19,14 @@ class TestApp < Sinatra::Base
     end
   end
 
+  def self.receive_count=(count)
+    @receive_count = count
+  end
+
+  def self.receive_count
+    @receive_count || 0
+  end
+
   def self.last_request=(request)
     @last_request = request
   end
@@ -53,6 +61,7 @@ class TestApp < Sinatra::Base
 
   multiroute(%w(post), "/good") do
     self.class.last_request = request
+    self.class.receive_count += 1
     [200, "YUP"]
   end
 
@@ -131,9 +140,36 @@ describe LogStash::Outputs::SensorsAnalytics do
       end
     end
 
+    context "send events" do
+      let(:url) {"http://localhost:#{port}/good"}
+      let(:verb_behavior_config) {{"url" => url, "flush_batch_size" => 10,"flush_interval_sec" => 2}}
+      subject {LogStash::Outputs::SensorsAnalytics.new(verb_behavior_config)}
+
+      before do
+        subject.register
+        TestApp.receive_count = 0
+      end
+
+      it 'should send requests 3 times' do
+        30.times { subject.multi_receive([event])}
+        expect(TestApp.receive_count).to eq(3)
+      end
+
+      before do
+        TestApp.receive_count = 0
+      end
+
+      it 'should send the request after 2 seconds' do
+        7.times { subject.multi_receive([event])}
+        expect(TestApp.receive_count).to eq(0)
+        sleep(3)
+        expect(TestApp.receive_count).to eq(1)
+      end
+    end
+
     context "with retryable failing requests" do
       let(:url) {"http://localhost:#{port}/retry"}
-      let(:verb_behavior_config) {{"url" => url, "flush_batch_size" => 1, "flush_interval" => 100}}
+      let(:verb_behavior_config) {{"url" => url, "flush_batch_size" => 1, "flush_interval_sec" => 100}}
       subject {LogStash::Outputs::SensorsAnalytics.new(verb_behavior_config)}
 
       before do
@@ -141,13 +177,13 @@ describe LogStash::Outputs::SensorsAnalytics do
       end
 
       before do
-        TestApp.retry_fail_count = 3
+        TestApp.retry_fail_count = 5
         subject.multi_receive([event])
       end
 
       it "should log a retryable response 6 times" do
+        expect(TestApp.retry_action_count).to eq(6)
         expect(TestApp.final_success).to eq(true)
-        expect(TestApp.retry_action_count).to eq(4)
         expect(TestApp.last_request.body.read).to eq('data_list=H4sIAAAAAAAA%2F1WPQU7DMBBF7zJlmcZJ2xSRJWuQ2MAGoWqwp%2B20bhzZ06Kqygm4AuIMLNhwoYpjYEe0iJX93x%2F9P%2FN4AMNBuNEyYwM1lKPxpJpCBsIbgrqcRFlNr8ZVURQR7tsIQTzqdZyhHTUS9QPTy513Zqsl0ta7lrwwBagPSSXep%2Ffh2Rk1mCrg%2B%2FXr%2BP4Gf1xbDIHn%2B%2BgdPz7%2Fe61n3e%2FVZWD5OTVc9C%2FcuEUQDMs4nMhsRz6wa6JT5GVenvCGZOnSpeKcDSdqSJBtSsF2K2joFvW1c%2BthPCu3TqMdDNR9iJFqTs1ixbhiUn2Esr%2FF58%2FwMhUqg4IjhdB1Tz8MgoViZwEAAA%3D%3D&gzip=1')
       end
     end
