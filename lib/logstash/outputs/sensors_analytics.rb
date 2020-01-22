@@ -128,7 +128,7 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
   def close
     @buffer_items.each do |buffer_item|
       buffer_item.buffer_state[:timer].kill
-      buffer_item.buffer_flush(:force => true)
+      buffer_item.buffer_flush(:final => true)
     end
     @report_thread.kill
     @client.close
