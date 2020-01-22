@@ -94,14 +94,14 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
           tag = host.to_s + file.to_s if tag.nil?
           collect_filebeat_status(lib_detail, offset) if @enable_filebeat_status_report
         else
-          # 由于 input 种类很多, 一般情况下 @metadata 中总会有有用的信息
-          metadata = e.get("@metadata")
-          lib_detail = ""
-          if metadata.is_a?(Hash)
-            metadata.to_hash.each do |k, v|
-              lib_detail << "#{k}=#{v}##"
-            end
-            lib_detail = lib_detail.chop.chop
+          # 这里记录一个 file_input 的 lib_detail, 其他 input 为空
+          host = e.get("host")
+          path = e.get("path")
+          if !host.nil? && !path.nil?
+            lib_detail = "#{host}###{path}"
+            tag = host.to_s + path.to_s if tag.nil?
+          else
+            lib_detail = ""
           end
         end
 
