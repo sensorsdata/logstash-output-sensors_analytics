@@ -138,17 +138,16 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
   private
 
   def buffer_index(tag)
-    return 0 if @url.length == 1
     tag.hash % @url.length
   end
 
   private
 
-  def concat_tag_from_hash_filed(events)
+  def concat_tag_from_hash_filed(event)
     if !@hash_filed.nil? && !@hash_filed.empty?
       tag = ""
       @hash_filed.each do |filed|
-        tag << events.get(filed).to_s
+        tag << event.get(filed).to_s
       end
       return tag
     end
@@ -157,10 +156,10 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
 
   private
 
-  def filebeat_input?(events)
-    tag = events.get("[agent][type]")
+  def filebeat_input?(event)
+    tag = event.get("[agent][type]")
     return true if !tag.nil? && tag == "filebeat"
-    tag = events.get("[@metadata][beat]")
+    tag = event.get("[@metadata][beat]")
     return true if !tag.nil? && tag == "filebeat"
     false
   end
@@ -266,7 +265,7 @@ class BufferItem
 
   # 数据被 Gzip > Base64 后尝试发送
   # 如果当前 url 发送失败, 会尝试获取列表中下一个地址进行发送, 发送失败的 url 在 3 秒内不会再尝试发送
-  # 如果所有的 url 都被标记为发送失败, sleep 3 秒后重新获取
+  # 如果所有的 url 都被标记为发送失败, sleep 5 秒后重新获取
   def flush(events, final)
     wio = StringIO.new("w")
     gzip_io = Zlib::GzipWriter.new(wio)
@@ -280,7 +279,7 @@ class BufferItem
     until do_send(form_data, url_item[:url])
       last_url = url_item[:url]
       # 将发送失败的 url 标记为不可用
-      disable_url url_item
+      disable_url(url_item)
       url_item = obtain_url
       @logger.warn("Send failed, retry send data to another url", :last_url => last_url, :retry_url => url_item[:url])
     end
@@ -293,22 +292,17 @@ class BufferItem
   def init_url_list(urls, start_index)
     @url_list = []
     index = start_index
-    @url_list << {
-        :url => urls[index],
-        :ok? => true,
-        :fail_time => Time.now
-    }
-
-    index = (index + 1) % urls.length
-    while index != start_index
+    loop do
       @url_list << {
           :url => urls[index],
           :ok? => true,
           :fail_time => Time.now
       }
       index = (index + 1) % urls.length
+      break if index == start_index
     end
   end
+
 
   private
 
