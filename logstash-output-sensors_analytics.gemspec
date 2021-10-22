@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'logstash-output-sensors_analytics'
-  s.version       = '0.1.2'
+  s.version       = '0.1.3'
   s.licenses      = ['Apache License (2.0)']
   s.summary       = 'Output plugin for Sensors Analytics'
   s.description   = 'This gem is a logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program.'
