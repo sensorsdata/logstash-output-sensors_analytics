@@ -116,8 +116,17 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
 
         buffer_item = @buffer_items[buffer_index(tag)]
         buffer_item.buffer_receive(record)
-      rescue
-        @logger.error("Could not process record", :record => e.to_s)
+      rescue => ex
+
+        @logger.error("Could not process record",
+                      :exception => ex,
+                      :exceptionClassName => ex.class.name,
+                      :exceptionMessage => ex.message,
+                      :exceptionBacktrace => ex.backtrace,
+                      :exceptionCause => ex.cause,
+                      :exceptionInspect => ex.inspect,
+                      :record => e.to_s)
+
         @parse_error_count += 1
       end
     end
@@ -196,11 +205,15 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
       url_send_count_sum[url] = 0
     end
 
+    flush_error_count_sum = 0
+
     @buffer_items.each do |buffer_item|
       buffer_url_send_count = buffer_item.url_send_count
       buffer_url_send_count.each do |url, count|
         url_send_count_sum[url] += count
       end
+
+      flush_error_count_sum += buffer_item.flush_error_count
     end
 
     total_send_count = 0
@@ -216,6 +229,7 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
                  :receive_count => @receive_count,
                  :send_count => total_send_count,
                  :parse_error_count => @parse_error_count,
+                 :flush_error_count => flush_error_count_sum,
                  :url_send_count => url_send_count_sum)
     @logger.info("Filebeat status Report: #{format_filebeat_report_and_clean}") if @enable_filebeat_status_report
   end
@@ -228,6 +242,7 @@ class BufferItem
 
   attr_accessor :buffer_state
   attr_accessor :url_send_count
+  attr_accessor :flush_error_count
 
   def initialize(option = {})
     @client = option[:client]
@@ -236,6 +251,7 @@ class BufferItem
     url_list.each do |url|
       @url_send_count[url] = 0
     end
+    @flush_error_count = 0
     init_url_list(url_list, option[:index])
     @logger = option[:logger]
 
@@ -254,8 +270,16 @@ class BufferItem
         @logger.warn("Send failed, code: #{response.code}, body: #{response.body}")
         return false
       end
-    rescue => e
-      @logger.warn("Send failed", :exception => e.class.name, :backtrace => e.backtrace)
+    rescue => ex
+
+      @logger.error("Send failed",
+                    :exception => ex,
+                    :exceptionClassName => ex.class.name,
+                    :exceptionMessage => ex.message,
+                    :exceptionBacktrace => ex.backtrace,
+                    :exceptionCause => ex.cause,
+                    :exceptionInspect => ex.inspect)
+
       return false
     end
     true
@@ -267,23 +291,51 @@ class BufferItem
   # 如果当前 url 发送失败, 会尝试获取列表中下一个地址进行发送, 发送失败的 url 在 3 秒内不会再尝试发送
   # 如果所有的 url 都被标记为发送失败, sleep 5 秒后重新获取
   def flush(events, final)
-    wio = StringIO.new("w")
-    gzip_io = Zlib::GzipWriter.new(wio)
-    gzip_io.write(events.to_json)
-    gzip_io.close
-    data = Base64.strict_encode64(wio.string)
-    form_data = {"data_list" => data, "gzip" => 1}
+    begin
+      wio = StringIO.new("w")
+      gzip_io = Zlib::GzipWriter.new(wio)
+      gzip_io.write(events.to_json)
+      gzip_io.close
+      data = Base64.strict_encode64(wio.string)
+      form_data = {"data_list" => data, "gzip" => 1}
 
-    url_item = obtain_url
-
-    until do_send(form_data, url_item[:url])
-      last_url = url_item[:url]
-      # 将发送失败的 url 标记为不可用
-      disable_url(url_item)
       url_item = obtain_url
-      @logger.warn("Send failed, retry send data to another url", :last_url => last_url, :retry_url => url_item[:url])
+
+      until do_send(form_data, url_item[:url])
+        last_url = url_item[:url]
+        # 将发送失败的 url 标记为不可用
+        disable_url(url_item)
+        url_item = obtain_url
+        @logger.warn("Send failed, retry send data to another url", :last_url => last_url, :retry_url => url_item[:url])
+      end
+      @url_send_count[url_item[:url]] += events.length
+    rescue => ex
+
+      if events.length == 1
+        # 打印异常现场
+        @logger.error("Flush failed",
+                      :exception => ex,
+                      :exceptionClassName => ex.class.name,
+                      :exceptionMessage => ex.message,
+                      :exceptionBacktrace => ex.backtrace,
+                      :exceptionCause => ex.cause,
+                      :exceptionInspect => ex.inspect,
+                      :events_data => events.to_s)
+
+        @flush_error_count += 1
+
+      elsif events.length > 1
+        # 降级处理: 将events 的批量发送，降级为指数级后退重试
+        pivot = events.length / 2
+        left = events.slice(0, pivot)
+        right = events.slice(pivot, events.length)
+        flush(left, final)
+        flush(right, final)
+
+        @logger.warn("Flush retry in exponential backoff!", :left_length => left.length, :right_length => right.length)
+      end
+
     end
-    @url_send_count[url_item[:url]] += events.length
   end
 
   private
