@@ -32,7 +32,7 @@ class LogStash::Outputs::SensorsAnalytics < LogStash::Outputs::Base
   # 开启 filebeat 状态记录
   config :enable_filebeat_status_report, :validate => :boolean, :default => true
 
-  PLUGIN_VERSION = "0.1.3"
+  PLUGIN_VERSION = "0.1.4"
 
   public
 
