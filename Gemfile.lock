@@ -1,10 +1,10 @@
 PATH
   remote: .
   specs:
-    logstash-output-sensors_analytics (0.1.0)
+    logstash-output-sensors_analytics (0.1.4)
       logstash-codec-plain
       logstash-core-plugin-api (>= 1.60, <= 2.99)
-      logstash-mixin-http_client (~> 7)
+      logstash-mixin-http_client (>= 6.0.0, < 8.0.0)
       stud (~> 0.0.23)
 
 GEM
@@ -132,10 +132,11 @@ GEM
     treetop (1.4.15)
       polyglot
       polyglot (>= 0.3.1)
-    webrick (1.4.2)
+    webrick (1.6.1)
 
 PLATFORMS
   java
+  x86_64-linux
 
 DEPENDENCIES
   logstash-devutils
